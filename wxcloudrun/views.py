@@ -1,66 +1,84 @@
-from datetime import datetime
-from flask import render_template, request
+import re
+from flask import Flask, request, jsonify
+import requests
 from run import app
-from wxcloudrun.dao import delete_counterbyid, query_counterbyid, insert_counter, update_counterbyid
-from wxcloudrun.model import Counters
-from wxcloudrun.response import make_succ_empty_response, make_succ_response, make_err_response
+from wxcloudrun.response import make_succ_response
+
+@app.route('/attendance', methods=['POST'])
+def get_attendance():  # put application's code here
+
+    # 可以通过 request 的 args 属性来获取参数
+    where = ''
+    parma = request.get_json()
+    id = parma["id"]
+    dateCode = parma["dateCode"]
+    if (dateCode == '1'):
+        # 本月
+        where = 'Month(A.Date) = month(getdate()) and Year(A.Date) =year(getdate())'
+    elif (dateCode == '2'):
+        # 上月
+        where = 'Month(A.Date) = month(dateadd(m,-1,getdate())) and Year(A.Date) =year(dateadd(m,-1,getdate()))'
+    elif (dateCode == '3'):
+        # 本年
+        where = 'Year(A.Date) =year(getdate())'
+    elif (dateCode == '4'):
+        # 上年
+        where = 'Year(A.Date) =year(dateAdd(year,-1,getdate()))'
+    elif (dateCode == '5'):
+        # 具体范围
+        beginDate = parma["beginDate"]
+        endDate = parma["endDate"]
+        where = "CONVERT(DATETIME,A.Date) >= CONVERT(DATETIME,'" + beginDate + "') and CONVERT(DATETIME,A.Date) <= CONVERT(DATETIME,'" + endDate + "')"
+    # 请求
+    # c0-id=7166_1712905079013
+    data = ("""callCount=1
+c0-scriptName=ajax_DatabaseAccessor
+c0-methodName=executeQuery
+
+c0-param0=string:HRM117
+c0-param1=string:select distinct code,CnName,Department,CardCode,Date,Time,ScName from ( SELECT distinct B.code,B.CnName,C.Name as Department,A.CardCode,Convert(nvarchar,A.Date,23) Date,min(time) MinTime,max(time) MaxTime,CodeInfo.ScName  FROM AttendanceCollect as A  LEFT JOIN Employee as B on A.EmployeeId=B.EmployeeId  LEFT JOIN Department as C ON C.DepartmentId=B.DepartmentId  LEFT JOIN Machine AS D ON A.MachineId=D.MachineId  LEFT JOIN AttendanceCollectLog AS F ON A.AttendanceCollectLogId=F.AttendanceCollectLogId  LEFT JOIN Employee AS E ON F.CollectEmployeeId=E.EmployeeId  LEFT JOIN CodeInfo ON CodeInfo.CodeInfoId = A.RepairId  where B.code = '""" +
+
+            id + "' and " + where + """ group by B.code,B.CnName,C.Name,A.CardCode,ScName,Convert(nvarchar,A.Date,23)  ) MM  UNPIVOT(Time for Subject in(MinTime,MaxTime) )as up order by Date,Time 
+c0-param2=null:null
+c0-param3=null:null
+xml=true""")
+
+    url = "http://efgpcn.digiwin.com/NaNaWeb/dwrDefault/exec/ajax_DatabaseAccessor.executeQuery.dwr"
+    headers = {'Accept': '*/*',
+               'Accept-Encoding': 'gzip, deflate',
+               'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+               'Cache-Control': 'no-cache',
+               'Content-Length': '1395',
+               'Content-Type': 'text/plain; charset=utf-8',
+               'Host': 'efgpcn.digiwin.com',
+               'Origin': 'http://efgpcn.digiwin.com',
+               'Pragma': 'no-cache',
+               'Proxy-Connection': 'keep-alive',
+               'Referer': 'http://efgpcn.digiwin.com/NaNaWeb/GP/WMS/PerformWorkItem/CallFormHandler?hdnMethod=handleForm',
+               'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+               }
+
+    response = requests.post(url=url, data=data)
+
+    text = response.text
+    # 定义正则表达式
+    date_pattern = r'\d{4}-\d{2}-\d{2}'
+    time_pattern = r'\"(\d{1,2}:\d{2}(?::\d{2})?)\"'
+
+    # 使用正则表达式提取日期
+    dates = re.findall(date_pattern, text)
+    times = re.findall(time_pattern, text)
+
+    # 打印提取的日期
+    print("日期", dates)
+    print("时间", times)
+    data = []
+    for date, time in zip(dates, times):
+        item = {}
+        item["date"] = date
+        item["time"] = time
+        data.append(item)
+
+    return  make_succ_response(data)
 
 
-@app.route('/')
-def index():
-    """
-    :return: 返回index页面
-    """
-    return render_template('index.html')
-
-
-@app.route('/api/count', methods=['POST'])
-def count():
-    """
-    :return:计数结果/清除结果
-    """
-
-    # 获取请求体参数
-    params = request.get_json()
-
-    # 检查action参数
-    if 'action' not in params:
-        return make_err_response('缺少action参数')
-
-    # 按照不同的action的值，进行不同的操作
-    action = params['action']
-
-    # 执行自增操作
-    if action == 'inc':
-        counter = query_counterbyid(1)
-        if counter is None:
-            counter = Counters()
-            counter.id = 1
-            counter.count = 1
-            counter.created_at = datetime.now()
-            counter.updated_at = datetime.now()
-            insert_counter(counter)
-        else:
-            counter.id = 1
-            counter.count += 1
-            counter.updated_at = datetime.now()
-            update_counterbyid(counter)
-        return make_succ_response(counter.count)
-
-    # 执行清0操作
-    elif action == 'clear':
-        delete_counterbyid(1)
-        return make_succ_empty_response()
-
-    # action参数错误
-    else:
-        return make_err_response('action参数错误')
-
-
-@app.route('/api/count', methods=['GET'])
-def get_count():
-    """
-    :return: 计数的值
-    """
-    counter = Counters.query.filter(Counters.id == 1).first()
-    return make_succ_response(0) if counter is None else make_succ_response(counter.count)
