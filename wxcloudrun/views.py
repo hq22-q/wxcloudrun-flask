@@ -48,7 +48,7 @@ xml=true""")
                'Accept-Encoding': 'gzip, deflate',
                'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
                'Cache-Control': 'no-cache',
-               'Content-Length': '1395',
+               # 'Content-Length': '1395',
                'Content-Type': 'text/plain; charset=utf-8',
                'Host': 'efgpcn.digiwin.com',
                'Origin': 'http://efgpcn.digiwin.com',
@@ -58,7 +58,7 @@ xml=true""")
                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
                }
 
-    response = requests.post(url=url, data=data)
+    response = requests.post(url=url, data=data, headers=headers)
 
     text = response.text
     # 定义正则表达式
