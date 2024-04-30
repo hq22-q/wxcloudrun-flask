@@ -14,5 +14,5 @@ def make_succ_response(data):
 
 
 def make_err_response(err_msg):
-    data = json.dumps({'code': -1, 'errorMsg': err_msg})
+    data = json.dumps({'code': 500, 'msg': err_msg})
     return Response(data, mimetype='application/json')
