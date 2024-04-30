@@ -1,16 +1,37 @@
+import json
 import re
 from flask import Flask, request, jsonify
 import requests
+from flask_redis import FlaskRedis
 from run import app
-from wxcloudrun.response import make_succ_response
+from wxcloudrun.response import make_succ_response, make_err_response
+
+# flask-redis 的配置和初始化
+app.config['REDIS_URL'] = 'redis://:h9qAztRcB8berfT03Qmr02sKHwDOXPyU@3.0.17.160:16666/0'
+redis_client = FlaskRedis(app)
+
 
 @app.route('/attendance', methods=['POST'])
 def get_attendance():  # put application's code here
-
     # 可以通过 request 的 args 属性来获取参数
     where = ''
     parma = request.get_json()
     id = parma["id"]
+    # # 写入 redis 中
+    # # 通过管道 pipeline 来操作 redis，以减少客户端与 redis-server 的交互次数。
+    # list = ["123", "456"]
+    # json_array = json.dumps(list)
+    # redis_client.set("attendanceID",json_array)
+
+    # 从 Redis 中获取 JSON 字符串
+    json_array_from_redis = redis_client.get('attendanceID')
+
+    # 解析 JSON 字符串为数组
+    id_list = json.loads(json_array_from_redis)
+    print(id_list)
+    if id not in id_list:
+        return make_err_response("此工号不可查询!")
+
     dateCode = parma["dateCode"]
     if (dateCode == '1'):
         # 本月
@@ -79,6 +100,4 @@ xml=true""")
         item["time"] = time
         data.append(item)
 
-    return  make_succ_response(data)
-
-
+    return make_succ_response(data)
