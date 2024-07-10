@@ -7,7 +7,7 @@ from run import app
 from wxcloudrun.response import make_succ_response, make_err_response
 
 # flask-redis 的配置和初始化
-app.config['REDIS_URL'] = 'redis://:iUYIvxa4pJogO3ZWytjJvRGTrP0XWvyy@54.169.189.182:12555/0'
+app.config['REDIS_URL'] = 'redis://root:123QWEASDasd!@54.169.189.182:12555/0'
 redis_client = FlaskRedis(app)
 
 
