@@ -7,7 +7,7 @@ from run import app
 from wxcloudrun.response import make_succ_response, make_err_response
 
 # flask-redis 的配置和初始化
-app.config['REDIS_URL'] = 'redis://:h9qAztRcB8berfT03Qmr02sKHwDOXPyU@3.0.17.160:16666/0'
+app.config['REDIS_URL'] = 'redis://:iUYIvxa4pJogO3ZWytjJvRGTrP0XWvyy@54.169.189.182:12555/0'
 redis_client = FlaskRedis(app)
 
 
@@ -33,19 +33,19 @@ def get_attendance():  # put application's code here
         return make_err_response("此工号不可查询!")
 
     dateCode = parma["dateCode"]
-    if (dateCode == '1'):
+    if dateCode == '1':
         # 本月
         where = 'Month(A.Date) = month(getdate()) and Year(A.Date) =year(getdate())'
-    elif (dateCode == '2'):
+    elif dateCode == '2':
         # 上月
         where = 'Month(A.Date) = month(dateadd(m,-1,getdate())) and Year(A.Date) =year(dateadd(m,-1,getdate()))'
-    elif (dateCode == '3'):
+    elif dateCode == '3':
         # 本年
         where = 'Year(A.Date) =year(getdate())'
-    elif (dateCode == '4'):
+    elif dateCode == '4':
         # 上年
         where = 'Year(A.Date) =year(dateAdd(year,-1,getdate()))'
-    elif (dateCode == '5'):
+    elif dateCode == '5':
         # 具体范围
         beginDate = parma["beginDate"]
         endDate = parma["endDate"]
